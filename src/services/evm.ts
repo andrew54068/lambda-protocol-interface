@@ -253,17 +253,6 @@ export const useEthereum = (): {
     ethereum: bloctoSDK.ethereum,
     connect: async () => {
       await modal.open();
-      /**
-       const accounts = await bloctoSDK.ethereum.request({
-         method: "eth_requestAccounts",
-       });
-       setAccount(accounts[0]);
- 
-       if (accounts.length > 0) {
-         logConnectWalletSuccess();
-       }
-       return accounts;
-      */
       return address;
     },
     disconnect: async () => {
