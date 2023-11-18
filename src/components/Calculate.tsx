@@ -33,13 +33,13 @@ const App: React.FC = () => {
   const [result, setResult] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const offchainAttestationId = "0x5f5da897a14d27db92ce5805f78103c149fd790a0419593f78344f56a0d718c5";
+  const offchainAttestationId = "0xfff11dfa5c6bf852db5ab022c63c01ca2ae4da698878e1adb9f461ebc4bc6c3b";
   const html = `https://sepolia.easscan.org/offchain/attestation/view/${offchainAttestationId}`;
 
   const executeLambda = async () => {
     setLoading(true);
 
-    const url = "http://0.0.0.0:9999/lambda/add_js";
+    const url = "http://0.0.0.0:9999/lambda/multiply_js";
     const inputJsonStr = JSON.stringify({ a: input1, b: input2 }); // {"addr":"0x...."}
     console.log(`💥 inputJsonStr: ${JSON.stringify(inputJsonStr, null, "  ")}`);
     const inputJsonStrHex = Buffer.from(inputJsonStr).toString("hex");

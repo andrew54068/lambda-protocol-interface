@@ -67,7 +67,7 @@ const App: React.FC = () => {
   const onClickGenerate = async () => {
     setLoading(true);
 
-    const url = "http://0.0.0.0:9999/lambda/batch_mint_v3_js";
+    const url = "http://0.0.0.0:9999/lambda/batch_mint_v4_js";
     const inputJsonStr = JSON.stringify({ addr: account }); // {"addr":"0x...."}
     console.log(`💥 inputJsonStr: ${JSON.stringify(inputJsonStr, null, "  ")}`);
     const inputJsonStrHex = Buffer.from(inputJsonStr).toString("hex");
@@ -121,7 +121,7 @@ const App: React.FC = () => {
     window.open(twitterURL, "_blank");
   }
 
-  const offchainAttestationId = "0x23099b586ec8eb6056dc00c233336c2dda17994ee8d7fec5f5fc673c231cc242";
+  const offchainAttestationId = "0xb6e5a2141536faa802d7c825fae7a7c9d6a74345f2494859c8ed88e6e9226dcd";
   const html = `https://sepolia.easscan.org/offchain/attestation/view/${offchainAttestationId}`;
 
   return (
