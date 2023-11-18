@@ -6,6 +6,70 @@ import { GlobalContext } from "../context/global";
 import { logConnectWalletSuccess } from "src/services/Amplitude";
 // import { setUserId as setAmplitudeUserId } from "./Amplitude/setting";
 
+import {
+  createWeb3Modal,
+  defaultConfig,
+  useWeb3Modal,
+  useWeb3ModalEvents,
+  useWeb3ModalState,
+  useWeb3ModalTheme,
+  useWeb3ModalAccount,
+} from "@web3modal/ethers5/react";
+
+const projectId = import.meta.env.VITE_WALLET_CONNECT_ID;
+if (!projectId) {
+  throw new Error("VITE_WALLET_CONNECT_ID is not set");
+}
+
+// 2. Set chains
+const chains = [
+  // {
+  //   chainId: 1,
+  //   name: "Ethereum",
+  //   currency: "ETH",
+  //   explorerUrl: "https://etherscan.io",
+  //   rpcUrl: "https://cloudflare-eth.com",
+  // },
+  // {
+  //   chainId: 42161,
+  //   name: "Arbitrum",
+  //   currency: "ETH",
+  //   explorerUrl: "https://arbiscan.io",
+  //   rpcUrl: "https://arb1.arbitrum.io/rpc",
+  // },
+  {
+    chainId: 137,
+    name: "Polygon",
+    currency: "Matic",
+    explorerUrl: "https://polygonscan.com",
+    rpcUrl: "https://polygon.drpc.org",
+  },
+];
+
+const ethersConfig = defaultConfig({
+  metadata: {
+    name: "Web3Modal",
+    description: "Web3Modal Laboratory",
+    url: "https://web3modal.com",
+    icons: ["https://avatars.githubusercontent.com/u/37784886"],
+  },
+  defaultChainId: 137,
+  rpcUrl: "https://cloudflare-eth.com",
+});
+
+// 3. Create modal
+createWeb3Modal({
+  ethersConfig,
+  chains,
+  projectId,
+  enableAnalytics: true,
+  themeMode: "light",
+  themeVariables: {
+    "--w3m-color-mix": "#00DCFF",
+    "--w3m-color-mix-strength": 20,
+  },
+});
+
 export interface ExtendedEthereumProviderInterface extends EthereumProviderInterface {
   enable: () => Promise<any>;
   chainId: string;
@@ -126,6 +190,12 @@ export const useEthereum = (): {
   connect: () => Promise<any>;
   disconnect: () => Promise<any>;
 } => {
+  const modal = useWeb3Modal();
+  // const state = useWeb3ModalState();
+  // const { themeMode, themeVariables, setThemeMode } = useWeb3ModalTheme();
+  // const events = useWeb3ModalEvents();
+  const { address, chainId: chain_id, isConnected } = useWeb3ModalAccount();
+
   const { setAccount, account, setChainId, chainId } = useContext(GlobalContext);
   useEffect(() => {
     const handleAccountsChanged = (accounts: string[]) => {
@@ -176,16 +246,19 @@ export const useEthereum = (): {
     chainId,
     ethereum: bloctoSDK.ethereum,
     connect: async () => {
-      const accounts = await bloctoSDK.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      setAccount(accounts[0]);
-
-      if (accounts.length > 0) {
-        logConnectWalletSuccess();
-      }
-
-      return accounts;
+      await modal.open();
+      /**
+       const accounts = await bloctoSDK.ethereum.request({
+         method: "eth_requestAccounts",
+       });
+       setAccount(accounts[0]);
+ 
+       if (accounts.length > 0) {
+         logConnectWalletSuccess();
+       }
+       return accounts;
+      */
+      return address;
     },
     disconnect: () => bloctoSDK.ethereum.request({ method: "wallet_disconnect" }),
   };
