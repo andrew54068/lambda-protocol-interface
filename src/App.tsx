@@ -23,7 +23,7 @@ function App() {
           <Navbar />
           <Box margin="0 auto" maxW="560px" minH="100vh">
             <Routes>
-              <Route path="/build-link" element={<BuildLink />} />
+              <Route path="/" element={<BuildLink />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Box>

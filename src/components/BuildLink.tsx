@@ -181,10 +181,10 @@ const App: React.FC = () => {
   return (
     <VStack gap="0" alignItems="flex-start" margin="0 auto" mt="75px" pt="space.3xl" px="20px">
       <Text fontWeight="weight.l" fontSize="size.heading.3" mb="space.m">
-        Build Your Link
+        Use a verified lambda
       </Text>
       <Text fontSize="lg" mb="space.m">
-        Enter Transaction Hash From Optimism
+        Approve Swap Stake in ONE action
       </Text>
       {txHashes.map((hash, index) => (
         <Fragment key={`${index}-${hash}`}>
@@ -218,11 +218,6 @@ const App: React.FC = () => {
           )}
         </Fragment>
       ))}
-      <Flex gap="4px" w="100%" justifyContent="center">
-        <Button variant="secondary" onClick={handleAddLink}>
-          Add
-        </Button>
-      </Flex>
       <Card boxShadow="2xl" p="20px" w="100%" pos="fixed" bottom="0" left="0" right="0">
         <Text fontSize="size.body.2" mb="20px">
           Your Link For Sharing
