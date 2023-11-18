@@ -196,6 +196,12 @@ export const useEthereum = (): {
   // const events = useWeb3ModalEvents();
   const { address, chainId: chain_id, isConnected } = useWeb3ModalAccount();
 
+  useEffect(() => {
+    if (address) {
+      setAccount(address);
+    }
+  }, [address]);
+
   const { setAccount, account, setChainId, chainId } = useContext(GlobalContext);
   useEffect(() => {
     const handleAccountsChanged = (accounts: string[]) => {
