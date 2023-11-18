@@ -266,6 +266,8 @@ export const useEthereum = (): {
       */
       return address;
     },
-    disconnect: () => bloctoSDK.ethereum.request({ method: "wallet_disconnect" }),
+    disconnect: async () => {
+      await modal.close();
+    },
   };
 };

@@ -7,7 +7,20 @@ import { ADDR_PLACEHOLDER } from "src/constants";
 import getMethodData from "src/utils/getMethodData";
 import MinusIcon from "src/assets/minus.svg?react";
 import Input from "./Input";
-import { useToast, Button as ChakraButton, Flex, Tag, VStack, Box, Text, Card } from "@chakra-ui/react";
+import {
+  useToast,
+  Button as ChakraButton,
+  Flex,
+  Tag,
+  VStack,
+  HStack,
+  Box,
+  Text,
+  Card,
+  Image,
+  Link,
+} from "@chakra-ui/react";
+import { ExternalLinkIcon } from "@chakra-ui/icons";
 import Loading from "src/components/Loading";
 import {
   logClickCopyLink,
@@ -17,13 +30,21 @@ import {
   logViewBuildPage,
   logClickPostToTwitter,
 } from "src/services/Amplitude";
+import { useEthereum } from "src/services/evm";
 
 const generateReadableCallData = (methodData: any) => {
   return methodData.name;
 };
 
+export const hex2a = (hex) => {
+  var str = "";
+  for (var i = 0; i < hex.length; i += 2) str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  return str;
+};
+
 const App: React.FC = () => {
   const [txHashes, setTxHashes] = useState<string[]>([""]);
+  const { account, connect, disconnect } = useEthereum();
 
   const toast = useToast();
   const [txLink, setTxLink] = useState<string>("");
@@ -43,102 +64,38 @@ const App: React.FC = () => {
     logViewBuildPage();
   }, []);
 
-  useEffect(() => {
-    setReadyForSharing(!!txLink);
-  }, [txLink]);
-
-  const handleAddLink = () => {
-    setTxHashes((prev) => [...prev, ""]);
-    setTxLink("");
-    logClickAddButton();
-  };
-
-  const handleChangeLink = (index: number, value: string) => {
-    setTxHashes((prev) => {
-      const updatedHashes = [...prev];
-      updatedHashes[index] = value;
-      return updatedHashes;
-    });
-  };
-
   const onClickGenerate = async () => {
     setLoading(true);
-    const hasEmptyLink = txHashes.some((link) => link === "");
-    const hasInvalidLink = txHashes.some((link) => !link.startsWith("0x") || link.length !== 66);
 
-    if (hasEmptyLink || hasInvalidLink) {
-      // @todo show error
-      return undefined;
-    }
-
-    const txDataWithMethodData: any[] = [];
-
-    const txResult = await getTxInfo([...txHashes]);
-
-    console.log(`💥 txResult: ${JSON.stringify(txResult, null, "  ")}`);
-
-    const chainId = 10;
-
-    // resolve the intent of transaction
-    const requests: any[] = [];
-    for (const txInfo of txResult) {
-      const request = async (txInfo) => {
-        let newTxDataWithMethodData = {};
-
-        console.log(`💥 txInfo: ${JSON.stringify(txInfo, null, "  ")}`);
-
-        const contract = txInfo?.to;
-        if (txInfo && txInfo.data && txInfo.data !== "0x" && contract) {
-          const callData = txInfo.data;
-          const contractABI = await getABI(chainId, contract);
-          console.log(`💥 callData: ${JSON.stringify(callData, null, "  ")}`);
-          const methodData = await getMethodData(contractABI, chainId, contract, callData);
-
-          console.log(`💥 methodData: ${JSON.stringify(methodData, null, "  ")}`);
-
-          const readableCallData = generateReadableCallData(methodData);
-
-          newTxDataWithMethodData = {
-            ...txInfo,
-            methodData,
-            readableCallData,
-          };
-        }
-
-        txDataWithMethodData.push(newTxDataWithMethodData);
-      };
-      requests.push(request(txInfo));
-    }
-    await Promise.all(requests);
-
-    const replacedTxAndMethodData = txDataWithMethodData.map((methodData) => {
-      const { data, from } = methodData;
-      let tempData = data;
-
-      if (tempData.includes(strip0x(from))) {
-        // replace all from with ADDR_PLACEHOLDER
-        tempData = tempData.replace(new RegExp(strip0x(from), "g"), ADDR_PLACEHOLDER);
-      }
-      return { ...methodData, data: tempData };
+    const url = "http://0.0.0.0:9999/lambda/batch_mint_v3_js";
+    const inputJsonStr = JSON.stringify({ addr: account }); // {"addr":"0x...."}
+    console.log(`💥 inputJsonStr: ${JSON.stringify(inputJsonStr, null, "  ")}`);
+    const inputJsonStrHex = Buffer.from(inputJsonStr).toString("hex");
+    console.log(`💥 inputJsonStrHex: ${JSON.stringify(inputJsonStrHex, null, "  ")}`);
+    const response = await fetch(url, {
+      method: "POST", // *GET, POST, PUT, DELETE, etc.
+      mode: "cors", // no-cors, *cors, same-origin
+      cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: "same-origin", // include, *same-origin, omit
+      headers: {
+        "Content-Type": "application/json",
+        // 'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: JSON.stringify({
+        input: inputJsonStrHex,
+      }), // body data type must match "Content-Type" header
     });
 
-    const logData = replacedTxAndMethodData.reduce(
-      (acc, txData) => {
-        acc.txHashes = [acc.txHashes, txData.txHash];
-        acc.methodNames = [acc.methodNames, txData.methodData?.name];
+    const output = await response.json();
 
-        return acc;
-      },
-      {
-        txHashes: [],
-        methodNames: [],
-      }
-    );
+    const result = hex2a(output.data.output);
 
-    logClickGenerateLink(logData);
+    console.log(`💥 response: ${JSON.stringify(result, null, "  ")}`);
 
-    setTxDataWithMethodInfo(replacedTxAndMethodData);
-    setTxLink(window.location.origin + "/view?txInfo=" + encodeURIComponent(JSON.stringify(replacedTxAndMethodData)));
+    const link = "https://cart-social-share.netlify.app/view?txInfo=" + encodeURIComponent(result);
+    console.log(`💥 link: ${JSON.stringify(link, null, '  ')}`);
+
+    setTxLink(link);
     setLoading(false);
   };
 
@@ -154,15 +111,6 @@ const App: React.FC = () => {
     logClickCopyLink();
   };
 
-  const onRemoveTx = (index) => () => {
-    setTxHashes((prev) => {
-      const updatedHashes = [...prev];
-      updatedHashes.splice(index, 1);
-      return updatedHashes;
-    });
-    setTxLink("");
-  };
-
   function shareToTwitter(text: string, url: string) {
     const encodedText = encodeURIComponent(text);
     const encodedURL = encodeURIComponent(url);
@@ -173,100 +121,86 @@ const App: React.FC = () => {
     window.open(twitterURL, "_blank");
   }
 
-  const onHashInputChange = (index) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleChangeLink(index, e.target.value);
-    logEnterTransactionHash();
-  };
+  const offchainAttestationId = "0x23099b586ec8eb6056dc00c233336c2dda17994ee8d7fec5f5fc673c231cc242";
+  const html = `https://sepolia.easscan.org/offchain/attestation/view/${offchainAttestationId}`;
 
   return (
-    <VStack gap="0" alignItems="flex-start" margin="0 auto" mt="75px" pt="space.3xl" px="20px">
-      <Text fontWeight="weight.l" fontSize="size.heading.3" mb="space.m">
-        Use a verified lambda
-      </Text>
-      <Text fontSize="lg" mb="space.m">
-        Approve Swap Stake in ONE action
-      </Text>
-      {txHashes.map((hash, index) => (
-        <Fragment key={`${index}-${hash}`}>
-          <Flex alignItems="center" w="100%" mb="space.xs">
-            <Input
-              value={hash}
-              onChange={onHashInputChange(index)}
-              placeholder="Enter transaction hash here"
-              rightElement={
-                <ChakraButton
-                  variant="secondary"
-                  w="32px"
-                  h="32px"
-                  color="icon.primary"
-                  p="space.m"
-                  minWidth="0"
-                  borderRadius="6px"
-                  onClick={onRemoveTx(index)}
-                >
-                  <Box pos="absolute" left="50%" top="50%" transform="translate(-50%,-50%)">
-                    <MinusIcon width="16px" height="16px" />
-                  </Box>
-                </ChakraButton>
-              }
-            />
-          </Flex>
-          {txDataWithMethodInfo.length > index && (
-            <Tag key={`Text ${index}`} mb="space.xs">
-              Possible Intent: {txDataWithMethodInfo[index].readableCallData}
-            </Tag>
-          )}
-        </Fragment>
-      ))}
-      <Card boxShadow="2xl" p="20px" w="100%" pos="fixed" bottom="0" left="0" right="0">
-        <Text fontSize="size.body.2" mb="20px">
-          Your Link For Sharing
+    <HStack gap="200px" margin="0" alignItems="center" justifyContent="center">
+      <VStack gap="0" alignItems="flex-start" w="500px" margin="0" mt="75px" pt="space.3xl" px="20px">
+        <Text fontWeight="weight.l" fontSize="size.heading.3" mb="space.m">
+          Use a verified lambda
         </Text>
+        <Text fontSize="lg" mb="space.m">
+          Mint multiple NFT to
+        </Text>
+        <Flex alignItems="center" w="100%" mb="space.xs">
+          <Input value={account ?? "connect wallet first"} placeholder="Enter transaction hash here" />
+        </Flex>
+        <Card p="20px" w="100%" left="0" right="0">
+          <Text fontSize="size.body.2" mb="20px">
+            Your Link For Sharing
+          </Text>
 
-        <Box mb="20px">
-          <Input
-            placeholder="Your link will be shown here"
-            isReadOnly
-            value={txDataWithMethodInfo.length ? txLink : "Your link will be shown here"}
-          />
-        </Box>
-        {loading && (
-          <Flex
-            pos="absolute"
-            top="0"
-            right="0"
-            bottom="0"
-            left="0"
-            bg="rgba(255,255,255,0.5)"
-            alignItems="center"
-            justifyContent="center"
-            zIndex={1}
-          >
-            <Loading />
-          </Flex>
-        )}
-        {readyForSharing ? (
-          <>
-            <Button mb="space.m" onClick={handleCopy}>
-              {" "}
-              Copy{" "}
-            </Button>
-            <Button
-              colorScheme="twitter"
-              variant="secondary"
-              onClick={() => {
-                shareToTwitter("Share the link", txLink);
-                logClickPostToTwitter();
-              }}
+          <Box mb="20px">
+            <Input
+              placeholder="Your link will be shown here"
+              isReadOnly
+              value={txLink ?? "Your link will be shown here"}
+            />
+          </Box>
+          {loading && (
+            <Flex
+              pos="absolute"
+              top="0"
+              right="0"
+              bottom="0"
+              left="0"
+              bg="rgba(255,255,255,0.5)"
+              alignItems="center"
+              justifyContent="center"
+              zIndex={1}
             >
-              Post on Twitter
+              <Loading />
+            </Flex>
+          )}
+          {readyForSharing ? (
+            <>
+              <Button mb="space.m" onClick={handleCopy}>
+                {" "}
+                Copy{" "}
+              </Button>
+              <Button
+                colorScheme="twitter"
+                variant="secondary"
+                onClick={() => {
+                  shareToTwitter("Share the link", txLink);
+                  logClickPostToTwitter();
+                }}
+              >
+                Post on Twitter
+              </Button>
+            </>
+          ) : (
+            <Button onClick={onClickGenerate} isDisabled={!account}>
+              Generate Link
             </Button>
-          </>
-        ) : (
-          <Button onClick={onClickGenerate}>Generate Link</Button>
-        )}
-      </Card>
-    </VStack>
+          )}
+        </Card>
+      </VStack>
+      <VStack gap="20px" alignItems="center" margin="0" mt="75px" pt="space.3xl" px="20px">
+        <Image
+          src="https://pbs.twimg.com/profile_images/1593335725751083008/0XMyDyLq_400x400.png"
+          alt="EAS"
+          maxWidth="200px"
+        />
+        <Link href={html} isExternal>
+          Offchain Attestation <ExternalLinkIcon mx="2px" />
+        </Link>
+        {/* <Text fontWeight="weight.l" fontSize="size.heading.3" mb="space.m">
+          EAS
+        </Text> */}
+      </VStack>
+    </HStack>
   );
 };
 
